@@ -86,6 +86,8 @@ static struct conn_tqh free_connq; /* free conn q */
 
 /*
  * Return the context associated with this connection.
+ * 对于client和proxy, conn->owner 是server_pool 对象
+ * 对于server, conn->owner 是一个server 对象
  */
 struct context *
 conn_to_ctx(struct conn *conn)
@@ -102,6 +104,9 @@ conn_to_ctx(struct conn *conn)
     return pool->ctx;
 }
 
+/*
+ * 简单的分配一个conn对象, 或者从free_connq里面获取一个.
+ * */
 static struct conn *
 _conn_get(void)
 {
@@ -157,6 +162,9 @@ _conn_get(void)
     return conn;
 }
 
+/*
+ * 对_conn_get 的wrapper, 获取client或者server类型的conn实例(此时尚未连接)
+ * */
 struct conn *
 conn_get(void *owner, bool client, bool redis)
 {
@@ -188,8 +196,8 @@ conn_get(void *owner, bool client, bool redis)
         conn->close = client_close;
         conn->active = client_active;
 
-        conn->ref = client_ref;
-        conn->unref = client_unref;
+        conn->ref = client_ref; //插入到pool->c_conn_q 里. 设置conn->owner
+        conn->unref = client_unref; //反之
 
         conn->enqueue_inq = NULL;
         conn->dequeue_inq = NULL;
@@ -211,7 +219,7 @@ conn_get(void *owner, bool client, bool redis)
         conn->close = server_close;
         conn->active = server_active;
 
-        conn->ref = server_ref;
+        conn->ref = server_ref; //插入server->s_conn_q, 设置owner
         conn->unref = server_unref;
 
         conn->enqueue_inq = req_server_enqueue_imsgq;

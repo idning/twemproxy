@@ -438,6 +438,7 @@ server_close(struct context *ctx, struct conn *conn)
     conn_put(conn);
 }
 
+/*连接是异步的*/
 rstatus_t
 server_connect(struct context *ctx, struct server *server, struct conn *conn)
 {
@@ -646,6 +647,10 @@ server_pool_server(struct server_pool *pool, uint8_t *key, uint32_t keylen)
     return server;
 }
 
+/*
+ * 这个函数是重点, 这里实现 到后端连接池.
+ * 在req_forward里面就是调用这个函数.
+ */
 struct conn *
 server_pool_conn(struct context *ctx, struct server_pool *pool, uint8_t *key,
                  uint32_t keylen)
@@ -660,7 +665,7 @@ server_pool_conn(struct context *ctx, struct server_pool *pool, uint8_t *key,
     }
 
     /* from a given {key, keylen} pick a server from pool */
-    server = server_pool_server(pool, key, keylen);
+    server = server_pool_server(pool, key, keylen); //计算在这个server_pool里面, 应该由哪个server来处理.
     if (server == NULL) {
         return NULL;
     }

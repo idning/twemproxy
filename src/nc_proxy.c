@@ -193,7 +193,7 @@ proxy_each_init(void *elem, void *data)
         return NC_ENOMEM;
     }
 
-    status = proxy_listen(pool->ctx, p);
+    status = proxy_listen(pool->ctx, p);//做bind/listen/set noblocking/加到epool
     if (status != NC_OK) {
         p->close(pool->ctx, p);
         return status;
@@ -294,7 +294,8 @@ proxy_accept(struct context *ctx, struct conn *p)
         break;
     }
 
-    c = conn_get(p->owner, true, p->redis);
+    //用accept得到的fd 构造conn对象
+    c = conn_get(p->owner, true, p->redis);//获得一个client类型的conn对象.
     if (c == NULL) {
         log_error("get conn for c %d from p %d failed: %s", sd, p->sd,
                   strerror(errno));

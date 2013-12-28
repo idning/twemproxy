@@ -184,7 +184,7 @@ rsp_filter(struct context *ctx, struct conn *conn, struct msg *msg)
     ASSERT(pmsg->peer == NULL);
     ASSERT(pmsg->request && !pmsg->done);
 
-    if (pmsg->swallow) {
+    if (pmsg->swallow) { //swallow: 吞下
         conn->dequeue_outq(ctx, conn, pmsg);
         pmsg->done = 1;
 
@@ -229,16 +229,26 @@ rsp_forward(struct context *ctx, struct conn *s_conn, struct msg *msg)
     s_conn->dequeue_outq(ctx, s_conn, pmsg);
     pmsg->done = 1;
 
+    //这是基于out queue 的第一个, 对应着当前收到的着一个msg么.
+    //
+    //下面这里建立的link是保证客户端收到的请求和响应一一对应的关键.
+    //client_conn->out_q 里面还保存着按照发送顺序的请求msg. 这里收到了response 的msg之后.
+    //一一对应起来, 向客户端返回response的时候, 按照 client_conn->out_q的顺序, 看相应的
+    //msg 的peer是否被设置了, 如果设置了, 就可以返回.  //
+    //
+    //这也是与一般的proxy不一样的地方,
+    //一般的proxy, 收到client_conn_1消息, 处理后找个后端连接发过去, 此时这个后端连接是不会被其它客户端连接复用的, 而这时收到的response也就必然是client_conn_1对应的response, 直接放到client_conn1的输出队列即可.
+    //
     /* establish msg <-> pmsg (response <-> request) link */
     pmsg->peer = msg;
     msg->peer = pmsg;
 
-    msg->pre_coalesce(msg);
+    msg->pre_coalesce(msg); //合并.
 
     c_conn = pmsg->owner;
     ASSERT(c_conn->client && !c_conn->proxy);
 
-    if (req_done(c_conn, TAILQ_FIRST(&c_conn->omsg_q))) {
+    if (req_done(c_conn, TAILQ_FIRST(&c_conn->omsg_q))) { //这里
         status = event_add_out(ctx->evb, c_conn);
         if (status != NC_OK) {
             c_conn->err = errno;
@@ -268,6 +278,10 @@ rsp_recv_done(struct context *ctx, struct conn *conn, struct msg *msg,
     rsp_forward(ctx, conn, msg);
 }
 
+/*这个函数作用很大, 它是从client_conn的out_q里面，找到是否有对应的response msg,
+ * 有的话, 就发送
+ * 没看到如果msg->peer还没设置, req_cone会返回false, 最终这个函数返回NULL
+ * */
 struct msg *
 rsp_send_next(struct context *ctx, struct conn *conn)
 {

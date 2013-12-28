@@ -113,7 +113,7 @@ struct server_pool {
     int                timeout;              /* timeout in msec */
     int                backlog;              /* listen backlog */
     uint32_t           client_connections;   /* maximum # client connection */
-    uint32_t           server_connections;   /* maximum # server connection */
+    uint32_t           server_connections;   /* maximum # server connection */  //这里是总数, 是说这个pool里面, 与所有后端的连接, 最多只能有这么多个.
     int64_t            server_retry_timeout; /* server retry timeout in usec */
     uint32_t           server_failure_limit; /* server failure limit */
     unsigned           auto_eject_hosts:1;   /* auto_eject_hosts? */

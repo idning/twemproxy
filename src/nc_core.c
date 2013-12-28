@@ -124,8 +124,8 @@ core_start(struct instance *nci)
 {
     struct context *ctx;
 
-    mbuf_init(nci);
-    msg_init();
+    mbuf_init(nci); //内存池
+    msg_init(); //内存池
     conn_init();
 
     ctx = core_ctx_create(nci);
@@ -290,7 +290,7 @@ core_core(void *arg, uint32_t events)
 
     /* read takes precedence over write */
     if (events & EVENT_READ) {
-        status = core_recv(ctx, conn);
+        status = core_recv(ctx, conn);      //简单直接调用 conn->recv
         if (status != NC_OK || conn->done || conn->err) {
             core_close(ctx, conn);
             return NC_ERROR;
@@ -298,7 +298,7 @@ core_core(void *arg, uint32_t events)
     }
 
     if (events & EVENT_WRITE) {
-        status = core_send(ctx, conn);
+        status = core_send(ctx, conn);      //简单直接调用 conn->send
         if (status != NC_OK || conn->done || conn->err) {
             core_close(ctx, conn);
             return NC_ERROR;

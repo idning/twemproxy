@@ -187,6 +187,7 @@ nc_print_run(struct instance *nci)
              nci->pid);
     }
 
+    //这....
     loga("run, rabbit run / dig that hole, forget the sun / "
          "and when at last the work is done / don't sit down / "
          "it's time to dig another one");
@@ -516,7 +517,7 @@ nc_post_run(struct instance *nci)
 
 static void
 nc_run(struct instance *nci)
-{
+{//超清晰的主函数
     rstatus_t status;
     struct context *ctx;
 

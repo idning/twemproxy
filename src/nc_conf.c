@@ -1152,7 +1152,7 @@ conf_validate_server(struct conf *cf, struct conf_pool *cp)
      * is configured, we only check for duplicate "name" and not for duplicate
      * "host:port:weight"
      */
-    array_sort(&cp->server, conf_server_name_cmp);
+    array_sort(&cp->server, conf_server_name_cmp);      //按名字排序.
     for (valid = true, i = 0; i < nserver - 1; i++) {
         struct conf_server *cs1, *cs2;
 
@@ -1161,7 +1161,7 @@ conf_validate_server(struct conf *cf, struct conf_pool *cp)
 
         if (string_compare(&cs1->name, &cs2->name) == 0) {
             log_error("conf: pool '%.*s' has servers with same name '%.*s'",
-                      cp->name.len, cp->name.data, cs1->name.len, 
+                      cp->name.len, cp->name.data, cs1->name.len,
                       cs1->name.data);
             valid = false;
             break;

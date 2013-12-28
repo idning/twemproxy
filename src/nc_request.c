@@ -352,7 +352,7 @@ req_recv_next(struct context *ctx, struct conn *conn, bool alloc)
         return NULL;
     }
 
-    msg = req_get(conn);
+    msg = req_get(conn); //实际下面是msg_get
     if (msg != NULL) {
         conn->rmsg = msg;
     }
@@ -428,6 +428,13 @@ req_forward_stats(struct context *ctx, struct server *server, struct msg *msg)
     stats_server_incr_by(ctx, server, request_bytes, msg->mlen);
 }
 
+/*
+ * 这个函数做的事情很重要,
+ * 实现很简单:
+ * 把msg放到 client_conn -> outq 里面
+ * 同时 放到 server_conn -> inq 里面.
+ *
+ * */
 static void
 req_forward(struct context *ctx, struct conn *c_conn, struct msg *msg)
 {
@@ -471,7 +478,7 @@ req_forward(struct context *ctx, struct conn *c_conn, struct msg *msg)
         key = msg->key_start;
         keylen = (uint32_t)(msg->key_end - msg->key_start);
     }
-
+    //获得到后端的连接. (可能是新建, 或者从pool里面获取)
     s_conn = server_pool_conn(ctx, c_conn->owner, key, keylen);
     if (s_conn == NULL) {
         req_forward_error(ctx, c_conn, msg);
@@ -526,10 +533,10 @@ req_send_next(struct context *ctx, struct conn *conn)
     ASSERT(!conn->client && !conn->proxy);
 
     if (conn->connecting) {
-        server_connected(ctx, conn);
+        server_connected(ctx, conn);    //因为是异步连接, 如果一下没有连上，就会是connecting状态, 这里把状态改成connected
     }
 
-    nmsg = TAILQ_FIRST(&conn->imsg_q);
+    nmsg = TAILQ_FIRST(&conn->imsg_q);  //从inq 里面获取一个, 准备发送.
     if (nmsg == NULL) {
         /* nothing to send as the server inq is empty */
         status = event_del_out(ctx->evb, conn);
@@ -546,7 +553,7 @@ req_send_next(struct context *ctx, struct conn *conn)
         nmsg = TAILQ_NEXT(msg, s_tqe);
     }
 
-    conn->smsg = nmsg;
+    conn->smsg = nmsg; //设置当前正在准备发送的msg conn->smsg
 
     if (nmsg == NULL) {
         return NULL;

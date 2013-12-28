@@ -611,6 +611,7 @@ msg_recv_chain(struct context *ctx, struct conn *conn, struct msg *msg)
     size_t msize;
     ssize_t n;
 
+    //从当前 这个msg的 mbuf 链表里面, 拿到最后一个mbuf, 用来读取
     mbuf = STAILQ_LAST(&msg->mhdr, mbuf, next);
     if (mbuf == NULL || mbuf_full(mbuf)) {
         mbuf = mbuf_get();
@@ -623,7 +624,7 @@ msg_recv_chain(struct context *ctx, struct conn *conn, struct msg *msg)
     ASSERT(mbuf->end - mbuf->last > 0);
 
     msize = mbuf_size(mbuf);
-
+    //尝试读满这个缓冲区. 这个缓冲区可能包含多个msg
     n = conn_recv(conn, mbuf->last, msize);
     if (n < 0) {
         if (n == NC_EAGAIN) {
@@ -636,9 +637,15 @@ msg_recv_chain(struct context *ctx, struct conn *conn, struct msg *msg)
     mbuf->last += n;
     msg->mlen += (uint32_t)n;
 
+    //好, 读到了一些东东.
     for (;;) {
-        status = msg_parse(ctx, conn, msg);
-        if (status != NC_OK) {
+        status = msg_parse(ctx, conn, msg); //这里面可能调用 req_filter 和 req_forward
+        if (status != NC_OK) {              //应该是解析到一个msg调用一次. forword, 这样这个消息很快就会被server_conn 上的钩子发出去, 问题是, client和server之间没有一对一联系. 这个请求的结果是如何收割的呢? 关键点在req_forward里面, 它
+
+             //把msg放到 client_conn -> outq 里面
+             //同时 放到 server_conn -> inq 里面.
+             //所以这个msg就是联系client_conn 和server_conn的纽带.
+             //
             return status;
         }
 
@@ -665,12 +672,13 @@ msg_recv(struct context *ctx, struct conn *conn)
 
     conn->recv_ready = 1;
     do {
-        msg = conn->recv_next(ctx, conn, true);
+        msg = conn->recv_next(ctx, conn, true); //获得一个msg结构, , 这里conn->recv_next  实际是: req_recv_next, 底层是通过msg_get 获得一个msg对象.
+        如果conn->rmsg 有了, 不会重新获得一个msg
         if (msg == NULL) {
             return NC_OK;
         }
 
-        status = msg_recv_chain(ctx, conn, msg);
+        status = msg_recv_chain(ctx, conn, msg);//读满这个缓冲.
         if (status != NC_OK) {
             return status;
         }
@@ -705,7 +713,7 @@ msg_send_chain(struct context *ctx, struct conn *conn, struct msg *msg)
      * zero or greater than the permitted maximum.
      */
     limit = SSIZE_MAX;
-
+    //把整个conn里面所有的msg里面的所有buf取出来, 一起组一个sendv()
     for (;;) {
         ASSERT(conn->smsg == msg);
 

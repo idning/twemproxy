@@ -39,6 +39,8 @@ typedef void (*conn_msgq_t)(struct context *, struct conn *, struct msg *);
 struct conn {
     TAILQ_ENTRY(conn)  conn_tqe;      /* link in server_pool / server / free q */
     void               *owner;        /* connection owner - server_pool / server */
+                                     //对于client和proxy, conn->owner 是server_pool 对象
+                                     //对于server, conn->owner 是一个server 对象
 
     int                sd;            /* socket descriptor */
     int                family;        /* socket address family */

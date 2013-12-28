@@ -294,6 +294,9 @@ event_wait(struct event_base *evb, int timeout)
     NOT_REACHED();
 }
 
+/*
+ * 这是在一个单线程里面跑的, 统计用
+ * */
 void
 event_loop_stats(event_stats_cb_t cb, void *arg)
 {
