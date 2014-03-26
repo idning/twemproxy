@@ -31,6 +31,8 @@ struct mbuf {
     uint8_t            *end;    /* end of buffer (const) */
 };
 
+//这里queue来自 FreeBSD: src/sys/sys/queue.h,v 1.73 2010/02/20 01:05:30 emaste Exp $
+//
 STAILQ_HEAD(mhdr, mbuf);
 
 #define MBUF_MAGIC      0xdeadbeef

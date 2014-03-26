@@ -29,7 +29,7 @@ static bool
 redis_arg0(struct msg *r)
 {
     switch (r->type) {
-    case MSG_REQ_REDIS_EXISTS:
+    case MSG_REQ_REDIS_EXISTS:              //with one key (no more arg)
     case MSG_REQ_REDIS_PERSIST:
     case MSG_REQ_REDIS_PTTL:
     case MSG_REQ_REDIS_TTL:
@@ -275,6 +275,8 @@ redis_argeval(struct msg *r)
  *
  * Nutcracker only supports the Redis unified protocol for requests.
  */
+//这种手写的解析器, 可以只对输入的buf做一次遍历, 效率高, 但是感觉太容易出bug了. 代码太长容易晕
+//这个1200行的函数比较伤人..
 void
 redis_parse_req(struct msg *r)
 {
@@ -325,32 +327,33 @@ redis_parse_req(struct msg *r)
     ASSERT(r->pos != NULL);
     ASSERT(r->pos >= b->pos && r->pos <= b->last);
 
-    for (p = r->pos; p < b->last; p++) {
+    for (p = r->pos; p < b->last; p++) { //pos 到last 是已读部分.
         ch = *p;
 
         switch (state) {
 
         case SW_START:
-        case SW_NARG:
+        case SW_NARG:                                       //这个状态解析出: narg_start, narg_end, narg, rnarg
+                                                            //rnarg: 在这里等于narg, 后面每解析一个arg, 就减一.
             if (r->token == NULL) {
                 if (ch != '*') {
                     goto error;
                 }
-                r->token = p;
+                r->token = p;                               //当前token
                 /* req_start <- p */
                 r->narg_start = p;
                 r->rnarg = 0;
-                state = SW_NARG;
+                state = SW_NARG; //useless
             } else if (isdigit(ch)) {
                 r->rnarg = r->rnarg * 10 + (uint32_t)(ch - '0');
             } else if (ch == CR) {
                 if (r->rnarg == 0) {
                     goto error;
                 }
-                r->narg = r->rnarg;
-                r->narg_end = p;
-                r->token = NULL;
-                state = SW_NARG_LF;
+                r->narg = r->rnarg;                     //第一阶段的成果 narg_start, narg_end, narg
+                r->narg_end = p;                        //第一阶段的成果
+                r->token = NULL;                        //重置, 供解析下一个token用. token为 NULL, 其它和cr 代表开始, 进行中, 结束三种状态
+                state = SW_NARG_LF;                     //状态转换
             } else {
                 goto error;
             }
@@ -403,12 +406,12 @@ redis_parse_req(struct msg *r)
 
             break;
 
-        case SW_REQ_TYPE:
+        case SW_REQ_TYPE:                               //可以开始判断CMD是哪个.
             if (r->token == NULL) {
                 r->token = p;
             }
 
-            m = r->token + r->rlen;
+            m = r->token + r->rlen;                     //m指到了cmd尾巴上.
             if (m >= b->last) {
                 m = b->last - 1;
                 p = m;
@@ -421,11 +424,11 @@ redis_parse_req(struct msg *r)
 
             p = m; /* move forward by rlen bytes */
             r->rlen = 0;
-            m = r->token;
+            m = r->token;                               //m回到cmd开始.
             r->token = NULL;
             r->type = MSG_UNKNOWN;
 
-            switch (p - m) {
+            switch (p - m) {        //500行代码, 太长了..  弄成个函数把..
 
             case 3:
                 if (str3icmp(m, 'g', 'e', 't')) {
@@ -1265,7 +1268,7 @@ redis_parse_req(struct msg *r)
                     if (r->rnarg != 0) {
                         goto error;
                     }
-                    goto done;
+                    goto done; //这里表示解出来一个命令.
                 } else if (redis_arg3(r)) {
                     if (r->rnarg != 1) {
                         goto error;

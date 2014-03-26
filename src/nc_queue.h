@@ -60,7 +60,7 @@
  * This file defines five types of data structures: singly-linked lists,
  * singly-linked tail queues, lists, tail queues, and circular queues.
  *
- * A singly-linked list is headed by a single forward pointer. The elements
+ * A singly-linked list is headed by a single forward pointer. The elements             单链表  SLIST
  * are singly linked for minimum space and pointer manipulation overhead at
  * the expense of O(n) removal for arbitrary elements. New elements can be
  * added to the list after an existing element or at the head of the list.
@@ -70,7 +70,7 @@
  * for applications with large datasets and few or no removals or for
  * implementing a LIFO queue.
  *
- * A singly-linked tail queue is headed by a pair of pointers, one to the
+ * A singly-linked tail queue is headed by a pair of pointers, one to the               双头单链表 (做FIFO)  STAILQ
  * head of the list and the other to the tail of the list. The elements are
  * singly linked for minimum space and pointer manipulation overhead at the
  * expense of O(n) removal for arbitrary elements. New elements can be added
@@ -81,21 +81,21 @@
  * Singly-linked tail queues are ideal for applications with large datasets
  * and few or no removals or for implementing a FIFO queue.
  *
- * A list is headed by a single forward pointer (or an array of forward
+ * A list is headed by a single forward pointer (or an array of forward                 双向链表
  * pointers for a hash table header). The elements are doubly linked
  * so that an arbitrary element can be removed without a need to
  * traverse the list. New elements can be added to the list before
  * or after an existing element or at the head of the list. A list
  * may only be traversed in the forward direction.
  *
- * A tail queue is headed by a pair of pointers, one to the head of the
+ * A tail queue is headed by a pair of pointers, one to the head of the                 #双头双向链表.
  * list and the other to the tail of the list. The elements are doubly
  * linked so that an arbitrary element can be removed without a need to
  * traverse the list. New elements can be added to the list before or
  * after an existing element, at the head of the list, or at the end of
  * the list. A tail queue may be traversed in either direction.
  *
- * A circle queue is headed by a pair of pointers, one to the head of the
+ * A circle queue is headed by a pair of pointers, one to the head of the               #双头环形双向链表.
  * list and the other to the tail of the list. The elements are doubly
  * linked so that an arbitrary element can be removed without a need to
  * traverse the list. New elements can be added to the list before or after

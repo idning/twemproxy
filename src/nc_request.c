@@ -305,6 +305,11 @@ req_server_dequeue_omsgq(struct context *ctx, struct conn *conn, struct msg *msg
     stats_server_decr_by(ctx, conn->owner, out_queue_bytes, msg->mlen);
 }
 
+/*
+ *
+ * 这里实际是确保 conn->rmsg已经设置为一个msg对象, 并返回conn->rmsg
+ * 如果没有的话, 就分配一个
+ * */
 struct msg *
 req_recv_next(struct context *ctx, struct conn *conn, bool alloc)
 {
@@ -352,7 +357,7 @@ req_recv_next(struct context *ctx, struct conn *conn, bool alloc)
         return NULL;
     }
 
-    msg = req_get(conn); //实际下面是msg_get
+    msg = req_get(conn); //实际就是msg_get
     if (msg != NULL) {
         conn->rmsg = msg;
     }

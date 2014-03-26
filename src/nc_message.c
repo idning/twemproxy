@@ -436,7 +436,7 @@ msg_parsed(struct context *ctx, struct conn *conn, struct msg *msg)
         return NC_ENOMEM;
     }
 
-    nmsg = msg_get(msg->owner, msg->request, conn->redis);
+    nmsg = msg_get(msg->owner, msg->request, conn->redis); //用一个新的msg对象来存储这个mbuf
     if (nmsg == NULL) {
         mbuf_put(nbuf);
         return NC_ENOMEM;
@@ -448,6 +448,8 @@ msg_parsed(struct context *ctx, struct conn *conn, struct msg *msg)
     nmsg->mlen = mbuf_length(nbuf);
     msg->mlen -= nmsg->mlen;
 
+    //处理msg, 并且把conn->rmsg设为nmsg
+    //其实可以改为: 处理nmsg, 保持conn->rmsg不变. (结果一样, 感觉这样好理解)
     conn->recv_done(ctx, conn, msg, nmsg);
 
     return NC_OK;
@@ -576,7 +578,7 @@ msg_parse(struct context *ctx, struct conn *conn, struct msg *msg)
 
     msg->parser(msg);
 
-    switch (msg->result) {
+    switch (msg->result) { //对parse结果处理.
     case MSG_PARSE_OK:
         status = msg_parsed(ctx, conn, msg);
         break;
@@ -602,6 +604,26 @@ msg_parse(struct context *ctx, struct conn *conn, struct msg *msg)
     return conn->err != 0 ? NC_ERROR : status;
 }
 
+/*
+ *
+ * msg 总是等于 conn->rmsg (其实conn->rmsg相当于是读缓冲区)
+ *
+ * 读到以后parse, parse完放到imsg_q里面.
+ * 如果parse发现conn->rmsg的buf已经处理完了(就在上面的msg_parse函数里面), 就调用::
+ *
+        conn->recv_done(ctx, conn, msg, NULL);
+
+   这个函数实际req_recv_done 具体工作是filter & forward msg,  设置conn->rmsg=NULL,
+ * 将conn->rmsg置空, 下次重新获取.
+ * 其实我觉得这里没有必要, (这里的做法rmsg会变化, 就变得有点复杂).
+ *
+ * 还有一种情况, parse出来一个msg(MSG_PARSE_OK, MSG_PARSE_FRAGMENT), 调用::
+ *
+ *     conn->recv_done(ctx, conn, msg, nmsg); (这同时也调用req_forward)
+ *
+ * 新建一个nmsg, 修改conn->rmsg = nmsg; 这样继续parse.
+ * */
+
 static rstatus_t
 msg_recv_chain(struct context *ctx, struct conn *conn, struct msg *msg)
 {
@@ -611,7 +633,7 @@ msg_recv_chain(struct context *ctx, struct conn *conn, struct msg *msg)
     size_t msize;
     ssize_t n;
 
-    //从当前 这个msg的 mbuf 链表里面, 拿到最后一个mbuf, 用来读取
+    //从当前 这个msg(conn->rmsg)的 mbuf 链表里面, 拿到最后一个mbuf, 用来读取
     mbuf = STAILQ_LAST(&msg->mhdr, mbuf, next);
     if (mbuf == NULL || mbuf_full(mbuf)) {
         mbuf = mbuf_get();
@@ -637,9 +659,13 @@ msg_recv_chain(struct context *ctx, struct conn *conn, struct msg *msg)
     mbuf->last += n;
     msg->mlen += (uint32_t)n;
 
-    //好, 读到了一些东东.
-    for (;;) {
-        status = msg_parse(ctx, conn, msg); //这里面可能调用 req_filter 和 req_forward
+    //好, 读到了一些东东
+    for (;;) { //只要conn->rmsg有, 就一直去解析.
+        status = msg_parse(ctx, conn, msg);
+        //如果解析出一个msg, 这里会修改 conn->rmsg
+        //这里面可能调用 req_filter 和 req_forward,
+
+        log_debug(LOG_VVERB, "ning: xxxxxxxxxxxxx ,msg_parse return %d", status);
         if (status != NC_OK) {              //应该是解析到一个msg调用一次. forword, 这样这个消息很快就会被server_conn 上的钩子发出去, 问题是, client和server之间没有一对一联系. 这个请求的结果是如何收割的呢? 关键点在req_forward里面, 它
 
              //把msg放到 client_conn -> outq 里面
@@ -651,11 +677,13 @@ msg_recv_chain(struct context *ctx, struct conn *conn, struct msg *msg)
 
         /* get next message to parse */
         nmsg = conn->recv_next(ctx, conn, false);
-        if (nmsg == NULL || nmsg == msg) {
+        log_debug(LOG_VVERB, "ning.1: msg: %p, nmsg: %p", msg, nmsg);
+        if (nmsg == NULL || nmsg == msg) {//nmsg==msg不一定表示没有可parse的data吧?
             /* no more data to parse */
             break;
         }
 
+        log_debug(LOG_VVERB, "ning.2: msg: %p, nmsg: %p", msg, nmsg);
         msg = nmsg;
     }
 
@@ -670,15 +698,18 @@ msg_recv(struct context *ctx, struct conn *conn)
 
     ASSERT(conn->recv_active);
 
+    log_debug(LOG_VVERB, "ning: in msg_recv");
     conn->recv_ready = 1;
     do {
         msg = conn->recv_next(ctx, conn, true); //获得一个msg结构, , 这里conn->recv_next  实际是: req_recv_next, 底层是通过msg_get 获得一个msg对象.
-        如果conn->rmsg 有了, 不会重新获得一个msg
+
+        //这里实际是确保 conn->rmsg已经设置为一个msg.
+        //如果conn->rmsg 有了, 不会重新获得一个msg
         if (msg == NULL) {
             return NC_OK;
         }
 
-        status = msg_recv_chain(ctx, conn, msg);//读满这个缓冲.
+        status = msg_recv_chain(ctx, conn, msg);//向rmsg 的mbuf链表尾上读东西
         if (status != NC_OK) {
             return status;
         }

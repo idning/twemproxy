@@ -106,7 +106,7 @@ mbuf_free(struct mbuf *mbuf)
 {
     uint8_t *buf;
 
-    log_debug(LOG_VVERB, "put mbuf %p len %d", mbuf, mbuf->last - mbuf->pos);
+    log_debug(LOG_VVERB, "free mbuf %p len %d", mbuf, mbuf->last - mbuf->pos);
 
     ASSERT(STAILQ_NEXT(mbuf, next) == NULL);
     ASSERT(mbuf->magic == MBUF_MAGIC);
@@ -119,10 +119,11 @@ void
 mbuf_put(struct mbuf *mbuf)
 {
     log_debug(LOG_VVERB, "put mbuf %p len %d", mbuf, mbuf->last - mbuf->pos);
+    log_debug(LOG_VVERB, "xxxx: %d", nfree_mbufq);
 
     ASSERT(STAILQ_NEXT(mbuf, next) == NULL);
     ASSERT(mbuf->magic == MBUF_MAGIC);
-
+    return mbuf_free(mbuf);
     nfree_mbufq++;
     STAILQ_INSERT_HEAD(&free_mbufq, mbuf, next);
 }

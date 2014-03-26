@@ -169,9 +169,9 @@ struct msg {
     struct mhdr          mhdr;            /* message mbuf header */
     uint32_t             mlen;            /* message length */
 
-    int                  state;           /* current parser state */
-    uint8_t              *pos;            /* parser position marker */
-    uint8_t              *token;          /* token marker */
+    int                  state;           /* current parser state */                            //parser use it
+    uint8_t              *pos;            /* parser position marker */                          //parser use it
+    uint8_t              *token;          /* token marker */                                    //parser use it
 
     msg_parse_t          parser;          /* message parser */
     msg_parse_result_t   result;          /* message parsing result */
@@ -183,17 +183,17 @@ struct msg {
 
     msg_type_t           type;            /* message type */
 
-    uint8_t              *key_start;      /* key start */
-    uint8_t              *key_end;        /* key end */
+    uint8_t              *key_start;      /* key start */                                        //parser use it
+    uint8_t              *key_end;        /* key end */                                          //parser use it
 
     uint32_t             vlen;            /* value length (memcache) */
     uint8_t              *end;            /* end marker (memcache) */
 
-    uint8_t              *narg_start;     /* narg start (redis) */
-    uint8_t              *narg_end;       /* narg end (redis) */
-    uint32_t             narg;            /* # arguments (redis) */
-    uint32_t             rnarg;           /* running # arg used by parsing fsa (redis) */
-    uint32_t             rlen;            /* running length in parsing fsa (redis) */
+    uint8_t              *narg_start;     /* narg start (redis) */                               //parser use it
+    uint8_t              *narg_end;       /* narg end (redis) */                                 //parser use it
+    uint32_t             narg;            /* # arguments (redis) */                              //parser use it
+    uint32_t             rnarg;           /* running # arg used by parsing fsa (redis) */        //parser use it
+    uint32_t             rlen;            /* running length in parsing fsa (redis) */            //parser use it
     uint32_t             integer;         /* integer reply value (redis) */
 
     struct msg           *frag_owner;     /* owner of fragment message */
