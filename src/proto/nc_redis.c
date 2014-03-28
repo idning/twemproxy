@@ -1054,7 +1054,9 @@ redis_parse_req(struct msg *r)
                     if (r->rnarg == 0) {
                         goto done;
                     }
-                    state = SW_FRAGMENT;
+                    /*state = SW_FRAGMENT;*/
+                    log_debug(LOG_VERB, "ning: we will not fragment and goback");
+                    state = SW_KEY_LEN; //read next key;
                 } else if (redis_argeval(r)) {
                     if (r->rnarg == 0) {
                         goto done;
@@ -2031,7 +2033,7 @@ redis_pre_coalesce(struct msg *r)
         mbuf_rewind(mbuf);
 
         /* accumulate the integer value in frag_owner of peer request */
-        pr->frag_owner->integer += r->integer;
+        pr->frag_owner->integer += r->integer; //删了多少个, 在这里求和.
         break;
 
     case MSG_RSP_REDIS_MULTIBULK:
@@ -2120,7 +2122,7 @@ redis_post_coalesce(struct msg *r)
 
         mbuf = STAILQ_FIRST(&pr->mhdr);
         ASSERT(mbuf_empty(mbuf));
-
+        //输出响应头,(mget, 多少个response)
         n = nc_scnprintf(mbuf->last, mbuf_size(mbuf), "*%d\r\n", r->nfrag);
         mbuf->last += n;
         pr->mlen += (uint32_t)n;

@@ -420,6 +420,8 @@ msg_parsed(struct context *ctx, struct conn *conn, struct msg *msg)
 
     mbuf = STAILQ_LAST(&msg->mhdr, mbuf, next);
     if (msg->pos == mbuf->last) {
+        loga("ning: msg dump:");
+        msg_dump(msg);
         /* no more data to parse */
         conn->recv_done(ctx, conn, msg, NULL);
         return NC_OK;
@@ -448,12 +450,23 @@ msg_parsed(struct context *ctx, struct conn *conn, struct msg *msg)
     nmsg->mlen = mbuf_length(nbuf);
     msg->mlen -= nmsg->mlen;
 
+    loga("ning: msg dump:");
+    msg_dump(msg);
+    loga("ning: nmsg dump:");
+    msg_dump(nmsg);
     //处理msg, 并且把conn->rmsg设为nmsg
     //其实可以改为: 处理nmsg, 保持conn->rmsg不变. (结果一样, 感觉这样好理解)
     conn->recv_done(ctx, conn, msg, nmsg);
 
     return NC_OK;
 }
+
+static rstatus_t
+msg_fragment2(struct context *ctx, struct conn *conn, struct msg *msg)
+{
+
+}
+
 
 static rstatus_t
 msg_fragment(struct context *ctx, struct conn *conn, struct msg *msg)
@@ -525,7 +538,8 @@ msg_fragment(struct context *ctx, struct conn *conn, struct msg *msg)
      *                  |  last_fragment = 1  |
      *                  |      nfrag = 0      |
      *                  +---------------------+
-     *
+     * frag_id 相等.
+     * nfrag 表示有多少个子请求.
      *
      */
     if (msg->frag_id == 0) {
@@ -538,7 +552,7 @@ msg_fragment(struct context *ctx, struct conn *conn, struct msg *msg)
     msg->last_fragment = 0;
     nmsg->last_fragment = 1;
     nmsg->frag_owner = msg->frag_owner;
-    msg->frag_owner->nfrag++;
+    msg->frag_owner->nfrag++; //子请求数+1
 
     stats_pool_incr(ctx, conn->owner, fragments);
 
@@ -577,7 +591,7 @@ msg_parse(struct context *ctx, struct conn *conn, struct msg *msg)
     }
 
     msg->parser(msg);
-
+    loga("ning: msg->parser return %d", msg->result);
     switch (msg->result) { //对parse结果处理.
     case MSG_PARSE_OK:
         status = msg_parsed(ctx, conn, msg);

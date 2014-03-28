@@ -118,7 +118,7 @@ req_done(struct conn *conn, struct msg *msg)
 
     msg->fdone = 1;
     nfragment = 1;
-
+    //在一个链表里面, 向前, 向后数
     for (pmsg = msg, cmsg = TAILQ_PREV(msg, msg_tqh, c_tqe);
          cmsg != NULL && cmsg->frag_id == id;
          pmsg = cmsg, cmsg = TAILQ_PREV(cmsg, msg_tqh, c_tqe)) {
