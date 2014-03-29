@@ -200,6 +200,7 @@ struct msg {
     uint32_t             nfrag;           /* # fragment */
     uint32_t             nfrag_done;           /* # fragment */
     uint64_t             frag_id;         /* id of fragmented message */
+    struct msg           **frag_seq;      /* sequence of fragment message, one element for each mget key*/
 
     err_t                err;             /* errno on error? */
     unsigned             error:1;         /* error? */
@@ -226,7 +227,7 @@ void msg_deinit(void);
 struct msg *msg_get(struct conn *conn, bool request, bool redis);
 void msg_put(struct msg *msg);
 struct msg *msg_get_error(bool redis, err_t err);
-void msg_dump(struct msg *msg);
+void msg_dump(struct msg *msg, int level);
 bool msg_empty(struct msg *msg);
 rstatus_t msg_recv(struct context *ctx, struct conn *conn);
 rstatus_t msg_send(struct context *ctx, struct conn *conn);
@@ -234,6 +235,8 @@ rstatus_t msg_send(struct context *ctx, struct conn *conn);
 struct msg *req_get(struct conn *conn);
 void req_put(struct msg *msg);
 bool req_done(struct conn *conn, struct msg *msg);
+void msg_reset_mbufs(struct msg *msg);
+
 bool req_error(struct conn *conn, struct msg *msg);
 void req_server_enqueue_imsgq(struct context *ctx, struct conn *conn, struct msg *msg);
 void req_server_dequeue_imsgq(struct context *ctx, struct conn *conn, struct msg *msg);
