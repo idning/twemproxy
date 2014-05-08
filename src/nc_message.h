@@ -80,8 +80,7 @@ typedef enum msg_type {
     MSG_REQ_REDIS_INCRBY,
     MSG_REQ_REDIS_INCRBYFLOAT,
     MSG_REQ_REDIS_MGET,
-    MSG_REQ_REDIS_MSET,                   /*mset & msetnx*/
-    MSG_REQ_REDIS_MSETNX,
+    MSG_REQ_REDIS_MSET,                   /*mset*/
     MSG_REQ_REDIS_PSETEX,
     MSG_REQ_REDIS_RESTORE,
     MSG_REQ_REDIS_SET,
