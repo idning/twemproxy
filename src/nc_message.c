@@ -300,6 +300,10 @@ msg_get(struct conn *conn, bool request, bool redis)
         msg->post_coalesce = memcache_post_coalesce;
     }
 
+    if (log_loggable(LOG_NOTICE) != 0){
+        msg->start_usec = nc_usec_now();
+    }
+
     log_debug(LOG_VVERB, "get msg %p id %"PRIu64" request %d owner sd %d",
               msg, msg->id, msg->request, conn->sd);
 
@@ -453,6 +457,8 @@ msg_make_reply(struct context *ctx, struct conn *conn, struct msg *req) {
     struct mbuf *mbuf;
     struct msg *msg;
 
+    ASSERT(conn->client && !conn->proxy);
+
     msg = msg_get(conn, true, conn->redis); /*replay*/
     if (msg == NULL) {
         conn->err = errno;
@@ -498,6 +504,7 @@ key_to_idx(struct server_pool *pool, uint8_t *key, uint32_t keylen){
  * parse next key in mget request, update
  * r->key_start
  * r->key_end
+ * all mbuf except the last one contain last key will be eaten, so key_start, key_end is still available, we will use this in notice_log
  * */
 static rstatus_t
 msg_fragment_argx_update_keypos(struct msg *r){
