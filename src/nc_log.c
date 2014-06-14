@@ -132,11 +132,10 @@ _log(const char *file, int line, int panic, const char *fmt, ...)
 {
     struct logger *l = &logger;
     int len, size, errno_save;
-    char buf[LOG_MAX_LEN], *timestr;
+    char buf[LOG_MAX_LEN];
     va_list args;
-    struct tm *local;
-    time_t t;
     ssize_t n;
+    struct timeval tv;
 
     if (l->fd < 0) {
         return;
@@ -146,12 +145,11 @@ _log(const char *file, int line, int panic, const char *fmt, ...)
     len = 0;            /* length of output buffer */
     size = LOG_MAX_LEN; /* size of output buffer */
 
-    t = time(NULL);
-    local = localtime(&t);
-    timestr = asctime(local);
-
-    len += nc_scnprintf(buf + len, size - len, "[%.*s] %s:%d ",
-                        strlen(timestr) - 1, timestr, file, line);
+    gettimeofday(&tv, NULL);
+    buf[len++] = '[';
+    len += strftime(buf + len, size - len, "%Y-%m-%d %H:%M:%S.", localtime(&tv.tv_sec));
+    len += snprintf(buf + len, size - len, "%03d", (int)tv.tv_usec/1000);
+    len += nc_scnprintf(buf + len, size - len, "] %s:%d ", file, line);
 
     va_start(args, fmt);
     len += nc_vscnprintf(buf + len, size - len, fmt, args);
