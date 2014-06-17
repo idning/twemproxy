@@ -74,6 +74,19 @@ log_reopen(void)
     }
 }
 
+/*log current log_level*/
+static void
+log_log_level(void)
+{
+    char buf[128];
+    char msg[] = "set log level to X\n";
+    char levels[] = "0123456789ABCDEF";
+
+    nc_memcpy(buf, msg, sizeof(msg));
+    buf[sizeof(msg)-3] = levels[logger.level];
+    loga_from_handler(buf);
+}
+
 void
 log_level_up(void)
 {
@@ -81,7 +94,7 @@ log_level_up(void)
 
     if (l->level < LOG_PVERB) {
         l->level++;
-        loga("up log level to %d", l->level);
+        log_log_level();
     }
 }
 
@@ -92,7 +105,7 @@ log_level_down(void)
 
     if (l->level > LOG_EMERG) {
         l->level--;
-        loga("down log level to %d", l->level);
+        log_log_level();
     }
 }
 
@@ -147,8 +160,8 @@ _log(const char *file, int line, int panic, const char *fmt, ...)
 
     gettimeofday(&tv, NULL);
     buf[len++] = '[';
-    len += strftime(buf + len, size - len, "%Y-%m-%d %H:%M:%S.", localtime(&tv.tv_sec));
-    len += snprintf(buf + len, size - len, "%03d", (int)tv.tv_usec/1000);
+    len += (int)strftime(buf + len, (size_t)(size - len), "%Y-%m-%d %H:%M:%S.", localtime(&tv.tv_sec));
+    len += nc_scnprintf(buf + len, size - len, "%03d", (int)tv.tv_usec/1000);
     len += nc_scnprintf(buf + len, size - len, "] %s:%d ", file, line);
 
     va_start(args, fmt);
