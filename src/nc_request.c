@@ -89,13 +89,15 @@ req_notice_log(struct msg * req){
     }
 
 
-    if (req->key_start && req->key_end){
-        pool = ((struct conn *)req->owner)->owner;
-        idx = server_pool_idx(pool, req->key_start, req->key_end - req->key_start);
-        server = array_get(&pool->server, idx);
-
-        *(req->key_end) = '\0';
+    if (!(req->key_start && req->key_end)){
+        return;
     }
+
+    pool = ((struct conn *)req->owner)->owner;
+    idx = server_pool_idx(pool, req->key_start, (uint32_t)(req->key_end - req->key_start));
+    server = array_get(&pool->server, idx);
+
+    *(req->key_end) = '\0';
 
     request_time = nc_usec_now() - req->start_usec;
 
@@ -107,7 +109,6 @@ req_notice_log(struct msg * req){
             req->id, req->owner->sd, request_time/1000, request_time%1000, msg_type_str(req->type),
             req->narg, req_len, rsp_len,
             req->key_start, client_addr, server->pname.len, server->pname.data, req->done, req->error||req->ferror);
-
 }
 
 /*

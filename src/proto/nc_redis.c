@@ -2247,8 +2247,6 @@ void
 redis_post_coalesce(struct msg *r)
 {
     struct msg *pr = r->peer; /* peer response */
-    struct mbuf *mbuf;
-    uint32_t n;
 
     ASSERT(!pr->request);
     ASSERT(r->request && r->first_fragment);
